@@ -1,0 +1,211 @@
+import re
+
+precedence = [['/','1'],['*','1'],['+','2'],['-','2']];
+def precedenceOf(t):
+	token = t[0];
+	for i in range(len(precedence)):
+		if(token == precedence[i][0]):
+			return int(precedence[i][1]);
+	return -1;
+tempVar = 1;
+ast = "";
+def astExpr(expr):
+	global tempVar;
+	global intermediate;
+	global ast;
+	ast = "";
+	opera = ['+','-','*','/','=']
+	precessed = [];
+	opc = 0;
+	operators = [];
+	for i in range(10):
+		operators.append([[],[]]);
+	
+	processed = [False]*(len(expr));
+	for i in range(len(expr)):
+		token = expr[i];
+		for j in range(len(precedence)):
+			if(token == precedence[j][0]):
+				operators[opc][0] = str(token);
+				operators[opc][1] = str(i);
+				opc += 1;
+				break;
+	
+
+	for i in range(opc-1,0,-1):
+		for j in range(i):
+			if (precedenceOf(operators[j][0]) > precedenceOf(operators[j+1][0])):
+				temp = operators[j][0];
+				operators[j][0] = operators[j+1][0];
+				operators[j+1][0] = temp;
+				temp = operators[j][1];
+				operators[j][1] = operators[j+1][1];
+				operators[j+1][1] = temp;
+	
+	for i in range(opc):
+		j = int(operators[i][1]+"");
+		op1 = "";
+		op2 = "";
+		if(processed[j-1] == True):
+			if(precedenceOf(operators[i-1][0]) == precedenceOf(operators[i][0])):
+				op1 = str(str("t")+str(tempVar));
+				tempVar += 1;
+			else:
+				for x in range(opc):
+					if((j-2) == int(operators[x][1])):
+						op1 = str(str("t")+str(tempVar));
+						tempVar += 1;
+		else:
+			k = 0;
+			for k in range(j-1,0,-1):
+				if expr[k] in opera:
+					break;
+			op1 = expr[k+1:j]+"";
+		if(processed[j+1] == True):
+			for x in range(opc):
+				if((j+2) == int(operators[x][1])):
+					op2 = str(str("t")+str(tempVar));
+		else:
+			k = 0;
+			for k in range(j+1,len(expr)):
+				if expr[k] in opera:
+					break;
+			for k in range(j+1,len(expr)):
+				if expr[k] in opera:
+					break;
+			if k != (len(expr)-1):
+				op2 = expr[j+1:k]+"";
+			else:
+				op2 = expr[j+1:k+1]+"";
+		
+		ast += "t"+str(tempVar+1)+" = "+str(op1)+str(operators[i][0])+str(op2)+"\n";
+		tempVar += 1;
+		processed[j] = processed[j-1] = processed[j+1] = True;
+	lval = expr.split("=");
+	if(len(lval) > 1):
+		if not(opc == 0 and "=" in expr):
+			ast += str(lval[0].strip())+" = "+"t"+str(tempVar)+"\n";
+			tempVar += 1;
+		else:
+			decl = lval[0].strip().split(" ");
+			if(len(decl) > 1):
+				ast += str(decl[1])+" = "+str(lval[1])+"\n";
+			else:
+				ast += str(decl[0])+" = "+str(lval[1])+"\n";
+	ast = ast.strip();
+	ret = "";
+	ast_lines = ast.split("\n");
+	if "<" in expr or ">" in expr or "<=" in expr or ">=" in expr:
+		ast_lines = [expr];
+	for i in ast_lines:
+		if "=" in i:
+			param = i.split("=");
+			param[1] = param[1].strip();
+		
+			if "+" in param[1]:
+				args = param[1].split("+");
+				if ret == "":
+					ret = "(+, "+str(args[0])+", "+str(args[1])+")";
+				else:
+					ret = "(+, "+str(args[0])+", "+ ret+")";
+			elif "-" in param[1]:
+				args = param[1].split("-");
+				if ret == "":
+					ret = "(-, "+str(args[0])+", "+str(args[1])+")";
+				else:
+					ret = "(-, "+str(args[0])+", "+ ret+")";
+			elif "*" in param[1]:
+				args = param[1].split("*");
+				if ret == "":
+					ret = "(*, "+str(args[0])+", "+str(args[1])+")";
+				else:
+					ret = "(*, "+str(args[0])+", "+ ret+")";
+			elif "/" in param[1]:
+				args = param[1].split("/");
+				if ret == "":
+					ret = "(/, "+str(args[0])+", "+str(args[1])+")";
+				else:
+					ret = "(/, "+str(args[0])+", "+ ret+")";
+			else:
+				if ret == "":
+					ret = "(=, "+str(param[0])+", "+str(param[1])+")";
+				else:
+					ret = "(=, "+str(param[0])+", "+ ret+")";
+		elif "<" in i:
+			args = i.split("<");
+			print(args);
+			if ret == "":
+				ret = "(<, "+str(args[0])+", "+str(args[1])+")";
+			else:
+				ret = "(<, "+str(args[0])+", "+ ret+")";
+		elif "<=" in i:
+			args = i.split("<=");
+			if ret == "":
+				ret = "(<=, "+str(args[0])+", "+str(args[1])+")";
+			else:
+				ret = "(<=, "+str(args[0])+", "+ ret+")";
+		elif ">" in i:
+			args = i.split(">");
+			if ret == "":
+				ret = "(>, "+str(args[0])+", "+str(args[1])+")";
+			else:
+				ret = "(>, "+str(args[0])+", "+ ret+")";
+		elif ">=" in i:
+			args = i.split(">=");
+			if ret == "":
+				ret = "(>=, "+str(args[0])+", "+str(args[1])+")";
+			else:
+				ret = "(>=, "+str(args[0])+", "+ ret+")";
+		
+	return ret;
+f = open("progMod.c", "r")
+
+expr = []
+forexpr = []
+forHeader = "";
+for i in f:
+	i = i.replace('\n', '')
+	if "for" in i:
+		forHeader = i
+	elif "=" in i:
+		check = i.strip()
+		check = check.strip(";")
+		if " " in check:
+			if forHeader == "":
+				expr.append(check.split(" ")[1])
+		else:
+			forexpr.append(check)
+
+
+init = re.split(r"\(|;", forHeader)[1]
+cond = re.split(r";", forHeader)[1]
+incr = re.split(r";|\)", forHeader)[2]
+
+
+print("The Abstract Syntax Tree for the given input is:")
+
+for i in expr:
+	out = i.split("=")
+	if not("+" in i or "-" in i or "*" in i or "/" in i):
+		print("(=, ", out[0], ", ", out[1], ")", sep = "")
+	else:
+		print(astExpr(i));
+
+print("(for, "+str(astExpr(init))+", "+str(astExpr(cond))+", ",end = "");
+for i in forexpr:
+	print(astExpr(i)+", ",end="");
+print(astExpr(incr),")");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
